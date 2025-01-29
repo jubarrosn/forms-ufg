@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de frequência | FD - Faculdade de Direito</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #ccc;
+            margin: 0;
+            padding: 20px;
+        }
+        .form-container {
+            background-color: #FFFFFF;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .form-container h2 {
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group select {
+            padding: 10px;
+            border: 1px solid #696262;
+            border-radius: 4px;
+            font-size: 16px;
+            text-transform: uppercase;
+        }
+        .form-group button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+        .generate-btn {
+            width: 100%;
+            padding: 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .generate-btn:hover {
+            background: #45a049;
+        }
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+        .form-row .form-group {
+            flex: 1;
+        }
+        .full-width {
+            display: block;
+            width: 96%;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>FORMULÁRIO DE PONTO ELETRÔNICO - FD/UFG</h2>
+        <form id="pontoForm">
+            <!-- Nome -->
+            <div class="form-group">
+                <label for="nome">Nome Completo:
+                <input type="checkbox" id="toggleFlag">Estagiário(a)</label>
+                <input type="text" id="nome" name="nome" required class="full-width">
+            </div>
+
+            <!-- Matrícula e Local de Trabalho -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="matricula">Matrícula:</label>
+                    <input type="inteiros" id="matricula" name="matricula"  placeholder="Somente números" required min="1" step="1" oninput="validateMatricula()" title="Somente números inteiros">
+                </div>
+                <div class="form-group">
+                    <label for="local">Local de Trabalho:</label>
+                    <input type="text" id="local" name="local" value="Faculdade de Direito" required class="full-width">
+                </div> <class="full-width">
+            </div>
+
+            <!-- Cargo -->
+            <div class="form-group">
+                <label for="cargo">Cargo:</label>
+                <input type="text" id="cargo" name="cargo" required class="full-width">
+            </div>
+
+            <!-- Mês, Ano e Jornada de Trabalho -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="mes">Mês:</label>
+                    <select id="mes" name="mes" required>
+                        <option value="janeiro">Janeiro</option>
+                        <option value="fevereiro">Fevereiro</option>
+                        <option value="março">Março</option>
+                        <option value="abril">Abril</option>
+                        <option value="maio">Maio</option>
+                        <option value="junho">Junho</option>
+                        <option value="julho">Julho</option>
+                        <option value="agosto">Agosto</option>
+                        <option value="setembro">Setembro</option>
+                        <option value="outubro">Outubro</option>
+                        <option value="novembro">Novembro</option>
+                        <option value="dezembro">Dezembro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ano">Ano:</label>
+                    <input type="number" id="ano" name="ano" required min="2025" max="2100" value="2025">
+                </div>
+                <div class="form-group">
+                    <label for="jornada">Jornada de Trabalho:</label>
+                    <select id="jornada" name="jornada" required>
+                         <option value="40">40 horas semanais</option>
+                         <option value="30">30 horas semanais</option>
+                         <option value="25">25 horas semanais</option>
+                         <option value="20">20 horas semanais</option>                
+                    </select>
+                </div>
+            </div>
+
+            <!-- Campos de Registro Mensal (Campos de Dia) -->
+            <div id="daysContainer"></div>
+
+            <button type="button" class="generate-btn" onclick="validateFormAndGeneratePDF()">Gerar Registro</button>
+        </form>
+    </div>
+
+    <script>
+        // Gera os campos para os 31 dias
+        const daysContainer = document.getElementById("daysContainer");
+        const checkbox = document.getElementById("toggleFlag");
+        const statusText = document.getElementById("statusText");
+
+        for (let i = 1; i <= 31; i++) {
+            const dayRow = document.createElement("div");
+            dayRow.className = "form-group";
+
+            dayRow.innerHTML = `
+                <label>Dia ${i.toString().padStart(2, '0')}:</label>
+                <div style="display: flex; gap: 65px;">
+                    <input type="time" min="00:00" max="23:59" name="entry1_${i}" value="08:00" placeholder="Entrada 1">
+                    <input type="time" min="00:00" max="23:59" name="exit1_${i}" value="12:00" placeholder="Saída 1">
+                    <input type="time" min="00:00" max="23:59" name="entry2_${i}" placeholder="Entrada 2">
+                    <input type="time" min="00:00" max="23:59" name="exit2_${i}" placeholder="Saída 2">
+                </div>
+                <div class="form-group">
+                <label type="text" name="occurrences_${i}"></label>
+                <input type="text" name="occurrences_${i}" placeholder="Ocorrências" class="full-width">
+                </div>
+
+                
+            `;
+
+            daysContainer.appendChild(dayRow);
+        }
+
+        // Validação do campo "Matrícula" para garantir que seja um número inteiro
+        function validateMatricula() {
+            const matricula = document.getElementById("matricula").value;
+            if (matricula && !Number.isInteger(Number(matricula))) {
+                alert("A matrícula deve ser um números inteiros.");
+                document.getElementById("matricula").value = '';
+            }
+        }
+
+        // Função para validar os campos obrigatórios e gerar o PDF
+        function validateFormAndGeneratePDF() {
+            const form = document.getElementById("pontoForm");
+            const nome = form["nome"].value.trim();
+            const matricula = form["matricula"].value.trim();
+            const cargo = form["cargo"].value.trim();
+            const local = form["local"].value.trim();
+
+            if (!nome) {
+                alert("Campo 'Nome' é obrigatório");
+                return;
+            }
+            if (!matricula) {
+                alert("Campo 'Matrícula' é obrigatório");
+                return;
+            }
+            if (!cargo) {
+                alert("Campo 'Cargo' é obrigatório");
+                return;
+            }
+            if (!local) {
+                alert("Campo 'Local de Trabalho' é obrigatório");
+                return;
+            }
+
+            generatePDF();
+        }
+        checkbox.addEventListener("change", updateStatus);
+
+// Função para gerar o PDF
+function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'A4'); // Ajuste para A4
+
+    const form = document.getElementById("pontoForm");
+    const formData = new FormData(form); // Declaração movida para o início
+
+    // Coleta dos dados do formulário
+    const nome = formData.get("nome")?.toUpperCase() || "";
+    const matricula = formData.get("matricula")?.toUpperCase() || "";
+    const cargo = formData.get("cargo")?.toUpperCase() || "";
+    const local = formData.get("local")?.toUpperCase() || "";
+    const mes = formData.get("mes")?.toUpperCase() || "";
+    const ano = formData.get("ano")?.toUpperCase() || "";
+    const jornada = formData.get("jornada")?.toUpperCase() || "";
+
+    
+    // URL da logo
+    const logoURL = "https://files.cercomp.ufg.br/weby/up/1/o/UFG_preto.png";
+
+    // Baixar a imagem e adicionar ao PDF
+    const img = new Image();
+    img.src = logoURL;
+    img.onload = function() {
+        // Inserir a logo no PDF (posição x: 10, y: 5, largura: 30, altura: 15)
+        doc.addImage(img, "PNG", 10, 5, 30, 15);
+
+        // Definir a fonte e tamanho do título
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text("UNIVERSIDADE FEDERAL DE GOIÁS - UFG", 50, 12);
+
+        // Definir o subtítulo
+        doc.setFontSize(12);
+        doc.text("FACULDADE DE DIREITO - FD", 50, 18);
+
+        // Gerar o PDF
+        doc.save("documento.pdf");
+    };
+
+    const flag = checkbox.checked ? "ESTAGIÁRIO(A)" : "SERVIDOR(A)";
+
+    doc.setFontSize(14);
+    doc.text(`REGISTRO DE PONTO MENSAL DE ${flag} - ${mes}/${ano}`, 105, 35, null, null, "center");
+
+
+    // Informações principais com margens
+    let yPosition = 40;
+    const marginHeight = 8; // Altura das margens
+    const fieldWidth = 189; // Largura dos campos
+    const textX = 12; // Posição horizontal do texto
+    const rectX = 10; // Posição horizontal da borda
+
+    doc.setFontSize(10);
+
+    // Nome e Matrícula
+    doc.rect(rectX, yPosition, fieldWidth, marginHeight); // Desenha o retângulo
+    doc.text(`NOME: ${nome}`, textX, yPosition + 5);
+    doc.rect(rectX + fieldWidth / 2, yPosition, fieldWidth / 2, marginHeight); // Outra coluna
+    doc.text(`MATRÍCULA: ${matricula}`, textX + fieldWidth / 2, yPosition + 5);
+    yPosition += marginHeight;
+
+    // Cargo e Local de Trabalho
+    doc.rect(rectX, yPosition, fieldWidth, marginHeight);
+    doc.text(`CARGO: ${cargo}`, textX, yPosition + 5);
+    doc.rect(rectX + fieldWidth / 2, yPosition, fieldWidth / 2, marginHeight);
+    doc.text(`LOCAL DE TRABALHO: ${local}`, textX + fieldWidth / 2, yPosition + 5);
+    yPosition += marginHeight;
+
+    // Mês, Ano e Jornada de Trabalho
+    doc.rect(rectX, yPosition, fieldWidth, marginHeight);
+    doc.text(`MÊS: ${mes}`, textX, yPosition + 5);
+    doc.rect(rectX + fieldWidth / 3, yPosition, fieldWidth / 3, marginHeight);
+    doc.text(`ANO: ${ano}`, textX + fieldWidth / 3, yPosition + 5);
+    doc.rect(rectX + (2 * fieldWidth) / 3, yPosition, fieldWidth / 3, marginHeight);
+    doc.text(`JORNADA: ${jornada} H SEMANAIS`, textX + (2 * fieldWidth) / 3, yPosition + 5);
+    yPosition += marginHeight + 5;
+
+    // Configuração para a tabela
+    const cellHeight = 6; // Altura das células
+    const cellWidth = 189; // Largura das células para a tabela
+    
+    // Registros dos 31 dias
+    for (let i = 1; i <= 31; i++) {
+    const day = i.toString().padStart(2, '0');
+    const entry1 = (formData.get(`entry1_${i}`) || "").toUpperCase();
+    const exit1 = (formData.get(`exit1_${i}`) || "").toUpperCase();
+    const entry2 = (formData.get(`entry2_${i}`) || "").toUpperCase();
+    const exit2 = (formData.get(`exit2_${i}`) || "").toUpperCase();
+    const occurrences = (formData.get(`occurrences_${i}`) || "").toUpperCase();
+
+    let line = `DIA ${day}: ENTRADA 1: ${entry1}; SAÍDA 1: ${exit1}`;
+    if (entry2 || exit2) line += `, ENTRADA 2: ${entry2}; SAÍDA 2: ${exit2}`;
+    if (occurrences) line += `; OCORRÊNCIAS: ${occurrences}.`;
+
+    // Divide o texto em linhas com largura máxima de 160mm
+    const splitLines = doc.splitTextToSize(line, 160);
+
+    // Desenha a borda da célula
+    const requiredHeight = splitLines.length * cellHeight;
+    doc.rect(10, yPosition, cellWidth, requiredHeight);
+
+    // Adiciona as linhas de texto
+    splitLines.forEach((txt, idx) => {
+        doc.text(txt, 12, yPosition + 4 + idx * cellHeight);
+    });
+
+    yPosition += requiredHeight;
+
+    // Adiciona nova página se necessário
+    if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+    }
+}
+
+    // Campo de assinaturas
+    yPosition += 20;
+    doc.setFontSize(10);
+    doc.text('________________________________________', 10, yPosition);
+    doc.text('________________________________________', 120, yPosition);
+    yPosition += 5;
+    doc.text(`ASSINATURA DO(A) ${flag}`, 20, yPosition);
+    doc.text('ASSINATURA DA CHEFIA IMEDIATA', 130, yPosition);
+
+
+/*    // Rodapé com data e hora de geração
+    const currentDateTime = new Date().toLocaleString('pt-BR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+    });*/
+    
+    doc.setFontSize(8);
+    doc.text('Universidade Federal de Goiás - UFG', 105, 295, null, null, "center")
+//Campus I - Praça Universitária - Setor Leste Universitário - Goiânia - Goiás - Brasil CEP: 74605-220`, 105, 290, null, null, "center");
+
+    // Salva o PDF
+    doc.save("registro_ponto_mensal.pdf");
+}
+
+
+</script>
+</body>
+</html>
